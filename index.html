@@ -9,19 +9,19 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
   </style>
 </head>
-<body class="bg-gray-100 p-4 md:p-10">
-  <h1 class="text-3xl font-black text-center text-slate-800 mb-10 uppercase tracking-tighter">
+<body class="bg-gray-100 px-4 py-6 md:px-8 md:py-10 xl:px-10">
+  <h1 class="text-4xl md:text-5xl font-black text-center text-slate-800 mb-10 md:mb-14 uppercase tracking-tight">
     Catálogo de venta 2026
   </h1>
 
-  <div id="errorBox" class="hidden max-w-5xl mx-auto mb-8 rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-    <h2 class="text-xl font-bold text-red-700 mb-2">Error al conectar con la base de datos</h2>
+  <div id="errorBox" class="hidden max-w-5xl mx-auto mb-8 rounded-3xl border border-red-200 bg-red-50 p-6 text-center">
+    <h2 class="text-xl md:text-2xl font-bold text-red-700 mb-2">Error al conectar con la base de datos</h2>
     <p id="errorText" class="text-red-600"></p>
   </div>
 
-  <div id="loading" class="text-center text-gray-500 mb-6">Cargando productos...</div>
+  <div id="loading" class="text-center text-gray-500 text-lg mb-6">Cargando productos...</div>
 
-  <div id="catalog" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"></div>
+  <div id="catalog" class="max-w-[1700px] mx-auto grid grid-cols-1 xl:grid-cols-2 gap-10 xl:gap-12"></div>
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -64,7 +64,7 @@
 
       if (!data || data.length === 0) {
         catalog.innerHTML = `
-          <div class="col-span-full text-center text-gray-500 bg-white rounded-2xl shadow p-8">
+          <div class="col-span-full text-center text-gray-500 bg-white rounded-3xl shadow p-10 text-lg">
             No hay productos para mostrar.
           </div>
         `;
@@ -75,11 +75,11 @@
         const imgs = normalizarImagenes(p.imagenes);
 
         const card = document.createElement('div');
-        card.className = 'bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col h-full';
+        card.className = 'bg-white rounded-[30px] shadow-xl overflow-hidden flex flex-col h-full';
 
         card.innerHTML = `
           <div class="relative group">
-            <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-64 scroll-smooth">
+            <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-[320px] sm:h-[380px] md:h-[460px] xl:h-[520px] scroll-smooth">
               ${
                 imgs.length
                   ? imgs.map(url => `
@@ -89,34 +89,45 @@
                         class="w-full h-full object-cover flex-shrink-0 snap-center"
                       >
                     `).join('')
-                  : `<div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200 flex-shrink-0">
+                  : `
+                    <div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200 flex-shrink-0 text-xl">
                       Sin imagen
-                    </div>`
+                    </div>
+                  `
               }
             </div>
             ${
               imgs.length > 1
                 ? `
-                  <button onclick="move('${p.id}', -1)" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow">❮</button>
-                  <button onclick="move('${p.id}', 1)" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow">❯</button>
+                  <button onclick="move('${p.id}', -1)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 md:w-16 md:h-16 text-2xl rounded-full shadow-lg transition">
+                    ❮
+                  </button>
+                  <button onclick="move('${p.id}', 1)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 md:w-16 md:h-16 text-2xl rounded-full shadow-lg transition">
+                    ❯
+                  </button>
                 `
                 : ''
             }
           </div>
 
-          <div class="p-6 text-center flex-grow">
-            <h2 class="text-xl font-bold text-slate-800">${p.nombre ?? 'Sin nombre'}</h2>
-            <p class="text-2xl font-black text-blue-600 my-2">
+          <div class="p-8 md:p-10 text-center flex-grow flex flex-col">
+            <h2 class="text-2xl md:text-3xl xl:text-[2.1rem] font-black text-slate-800 leading-tight">
+              ${p.nombre ?? 'Sin nombre'}
+            </h2>
+
+            <p class="text-3xl md:text-4xl font-black text-blue-600 my-4">
               $${Number(p.precio ?? 0).toLocaleString('es-CL')}
             </p>
-            <div class="text-sm text-gray-500 text-left border-t pt-4 space-y-1">
+
+            <div class="text-base md:text-lg text-gray-500 border-t pt-6 space-y-2 leading-relaxed mt-auto">
               ${
                 p.descripcion
                   ? String(p.descripcion)
                       .split('\n')
-                      .map(l => `<p>• ${l}</p>`)
+                      .filter(l => l.trim() !== '')
+                      .map(l => `<p>${l}</p>`)
                       .join('')
-                  : '<p>• Sin descripción</p>'
+                  : '<p>Sin descripción</p>'
               }
             </div>
           </div>
@@ -136,7 +147,8 @@
       try {
         const { data, error } = await supabase
           .from('productos')
-          .select('id, nombre, precio, descripcion, imagenes');
+          .select('id, nombre, precio, descripcion, imagenes')
+          .order('id', { ascending: false });
 
         if (error) {
           mostrarError(`Supabase respondió con error: ${error.message}`);
