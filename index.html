@@ -3,80 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo 2026</title>
+    <title>Admin - Subir Productos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
 </head>
-<body class="bg-gray-100 p-4 md:p-10">
-    <h1 class="text-3xl font-black text-center text-slate-800 mb-10 uppercase tracking-tighter">Catálogo de venta 2026</h1>
-    <div id="catalog" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <p class="col-span-full text-center text-gray-400">Cargando productos...</p>
+<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8">
+        <h2 class="text-2xl font-bold text-slate-800 mb-6 border-b pb-4">Añadir Nuevo Producto</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nombre del Producto</label>
+                <input
+                    type="text"
+                    id="nombre"
+                    class="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Ej: Monitor gaming ROG Strix XG27AQMR"
+                >
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Precio (texto libre)</label>
+                <input
+                    type="text"
+                    id="precio"
+                    class="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="Ej: $480.000 / 120 USD / Consultar"
+                >
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Descripción (Características por línea)</label>
+                <textarea
+                    id="desc"
+                    rows="5"
+                    class="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="27 Pulgadas&#10;Resolución 4K&#10;IPS rápido"
+                ></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Imágenes (Hasta 10)</label>
+                <input
+                    type="file"
+                    id="fotos"
+                    multiple
+                    accept="image/*"
+                    class="w-full mt-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                >
+            </div>
+
+            <button
+                onclick="subirProducto()"
+                id="btnMain"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95"
+            >
+                PUBLICAR PRODUCTO
+            </button>
+        </div>
     </div>
 
     <script>
-        const SB_URL = 'https://vobezwjwvnncquutilll.supabase.co';
-        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvYmV6d2p3dm5uZWNxdXRpbGxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMTc0NjcsImV4cCI6MjA5MTc5MzQ2N30.Kjug3k4zTolfWJuC-qh4wy6henkzn-G9MGMHlswmcW0'; 
+        const SB_URL = 'https://vobezwjwvnnecqutilll.supabase.co';
+        const SB_KEY = 'sb_publishable_wpdyTc9jzNC3fguoroXDKg_QtDCnSOv';
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-        async function cargarTodo() {
-            const container = document.getElementById('catalog');
-            
-            const { data, error } = await _supabase
-                .from('productos')
-                .select('*')
-                .order('id', { ascending: false });
+        async function subirProducto() {
+            const btn = document.getElementById('btnMain');
+            const fileInput = document.getElementById('fotos');
+            const nombre = document.getElementById('nombre').value.trim();
+            const precio = document.getElementById('precio').value.trim();
+            const desc = document.getElementById('desc').value.trim();
 
-            if (error) {
-                container.innerHTML = `<p class="col-span-full text-center text-red-500">Error: ${error.message}</p>`;
+            if (!nombre || !precio || fileInput.files.length === 0) {
+                alert("Por favor completa nombre, precio y al menos una foto.");
                 return;
             }
 
-            if (!data || data.length === 0) {
-                container.innerHTML = `<p class="col-span-full text-center text-gray-500 italic">No hay productos publicados.</p>`;
-                return;
+            btn.disabled = true;
+            btn.innerText = "SUBIENDO IMÁGENES...";
+
+            let urlsCargadas = [];
+
+            try {
+                for (const file of fileInput.files) {
+                    const extension = file.name.split('.').pop();
+                    const nombreArchivo = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+
+                    const { error: uploadError } = await _supabase.storage
+                        .from('fotos')
+                        .upload(nombreArchivo, file);
+
+                    if (uploadError) {
+                        throw new Error(`Error subiendo imagen: ${uploadError.message}`);
+                    }
+
+                    const { data: publicData } = _supabase.storage
+                        .from('fotos')
+                        .getPublicUrl(nombreArchivo);
+
+                    urlsCargadas.push(publicData.publicUrl);
+                }
+
+                const { error: insertError } = await _supabase
+                    .from('productos')
+                    .insert([{
+                        nombre: nombre,
+                        precio: precio,
+                        descripcion: desc,
+                        imagenes: urlsCargadas
+                    }]);
+
+                if (insertError) {
+                    throw new Error(insertError.message);
+                }
+
+                alert("¡Producto publicado con éxito!");
+                location.reload();
+
+            } catch (err) {
+                console.error(err);
+                alert("Error al guardar: " + err.message);
+                btn.disabled = false;
+                btn.innerText = "PUBLICAR PRODUCTO";
             }
-
-            container.innerHTML = ''; 
-
-            data.forEach(p => {
-                const imgs = p.imagenes || [];
-                const card = document.createElement('div');
-                card.className = "bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col h-full";
-                
-                card.innerHTML = `
-                    <div class="relative group">
-                        <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-64 scroll-smooth bg-gray-200">
-                            ${imgs.map(url => `<img src="${url}" class="w-full h-full object-cover flex-shrink-0 snap-center">`).join('')}
-                        </div>
-                        ${imgs.length > 1 ? `
-                            <button onclick="move('${p.id}', -1)" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow">❮</button>
-                            <button onclick="move('${p.id}', 1)" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow">❯</button>
-                        ` : ''}
-                    </div>
-                    <div class="p-6 text-center flex-grow">
-                        <h2 class="text-xl font-bold text-slate-800 capitalize">${p.nombre}</h2>
-                        <div class="inline-block bg-blue-50 px-4 py-2 rounded-full my-3">
-                            <p class="text-2xl font-black text-blue-600">$${p.precio}</p>
-                        </div>
-                        <div class="text-sm text-gray-500 text-left border-t pt-4 space-y-1 italic">
-                            ${p.descripcion ? p.descripcion.split('\n').map(l => `<p>• ${l}</p>`).join('') : ''}
-                        </div>
-                    </div>`;
-                container.appendChild(card);
-            });
         }
-
-        window.move = (id, dir) => {
-            const s = document.getElementById(`slider-${id}`);
-            s.scrollBy({ left: dir * s.offsetWidth, behavior: 'smooth' });
-        };
-
-        // Ejecutar carga inmediatamente
-        cargarTodo();
     </script>
 </body>
 </html>
