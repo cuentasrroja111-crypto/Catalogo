@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>.no-scrollbar::-webkit-scrollbar { display: none; }</style>
+</head>
+<body class="bg-gray-100 p-4 md:p-10">
+    <h1 class="text-3xl font-black text-center text-slate-800 mb-10 uppercase tracking-tighter">Catálogo de venta 2026</h1>
+    <div id="catalog" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"></div>
+    <script>
+        const SB_URL = 'https://vobezwjwvnncquutilll.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvYmV6d2p3dm5uZWNxdXRpbGxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMTc0NjcsImV4cCI6MjA5MTc5MzQ2N30.Kjug3k4zTolfWJuC-qh4wy6henkzn-G9MGMHlswmcW0'; 
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function cargar() {
+            const { data, error } = await _supabase.from('productos').select('*');
+            if (error) return console.log(error);
+            const container = document.getElementById('catalog');
+            data.forEach(p => {
+                const imgs = p.imagenes || [];
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col h-full";
+                card.innerHTML = `
+                    <div class="relative group">
+                        <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-64 scroll-smooth">
+                            ${imgs.map(url => `<img src="${url}" class="w-full h-full object-cover flex-shrink-0 snap-center">`).join('')}
+                        </div>
+                        <button onclick="move('${p.id}', -1)" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow">❮</button>
+                        <button onclick="move('${p.id}', 1)" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow">❯</button>
+                    </div>
+                    <div class="p-6 text-center flex-grow">
+                        <h2 class="text-xl font-bold text-slate-800">${p.nombre}</h2>
+                        <p class="text-2xl font-black text-blue-600 my-2">$${Number(p.precio).toLocaleString('es-CL')}</p>
+                        <div class="text-sm text-gray-500 text-left border-t pt-4 space-y-1">
+                            ${p.descripcion ? p.descripcion.split('\n').map(l => `<p>• ${l}</p>`).join('') : ''}
+                        </div>
+                    </div>`;
+                container.appendChild(card);
+            });
+        }
+        window.move = (id, dir) => {
+            const s = document.getElementById(`slider-${id}`);
+            s.scrollBy({ left: dir * s.offsetWidth, behavior: 'smooth' });
+        };
+        cargar();
+    </script>
+</body>
+</html>

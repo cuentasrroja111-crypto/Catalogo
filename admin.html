@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Subir Productos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8">
+        <h2 class="text-2xl font-bold text-slate-800 mb-6 border-b pb-4">Añadir Nuevo Producto</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nombre del Producto</label>
+                <input type="text" id="nombre" class="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Precio (Pesos)</label>
+                <input type="number" id="precio" class="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Descripción (Características por línea)</label>
+                <textarea id="desc" rows="4" class="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="27 Pulgadas&#10;Resolución 4K"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Imágenes (Hasta 10)</label>
+                <input type="file" id="fotos" multiple accept="image/*" class="w-full mt-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+
+            <button onclick="subirProducto()" id="btnMain" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95">
+                PUBLICAR PRODUCTO
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN ---
+        const SB_URL = 'https://vobezwjwvnncquutilll.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvYmV6d2p3dm5uZWNxdXRpbGxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMTc0NjcsImV4cCI6MjA5MTc5MzQ2N30.Kjug3k4zTolfWJuC-qh4wy6henkzn-G9MGMHlswmcW0';
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function subirProducto() {
+            const btn = document.getElementById('btnMain');
+            const fileInput = document.getElementById('fotos');
+            const nombre = document.getElementById('nombre').value;
+            const precio = document.getElementById('precio').value;
+            const desc = document.getElementById('desc').value;
+
+            if (!nombre || !precio || fileInput.files.length === 0) {
+                return alert("Por favor completa nombre, precio y al menos una foto.");
+            }
+
+            btn.disabled = true;
+            btn.innerText = "SUBIENDO IMÁGENES...";
+
+            let urlsCargadas = [];
+
+            for (let file of fileInput.files) {
+                const extension = file.name.split('.').pop();
+                const nombreArchivo = `${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
+
+                // 1. Subir al Storage (Bucket debe llamarse 'fotos')
+                const { data, error } = await _supabase.storage
+                    .from('fotos')
+                    .upload(nombreArchivo, file);
+
+                if (data) {
+                    const { data: publicData } = _supabase.storage.from('fotos').getPublicUrl(nombreArchivo);
+                    urlsCargadas.push(publicData.publicUrl);
+                } else {
+                    console.error("Error storage:", error);
+                }
+            }
+
+            // 2. Insertar en la tabla
+            const { error: insertError } = await _supabase.from('productos').insert([{
+                nombre: nombre,
+                precio: parseInt(precio),
+                descripcion: desc,
+                imagenes: urlsCargadas
+            }]);
+
+            if (insertError) {
+                alert("Error al guardar: " + insertError.message);
+                btn.disabled = false;
+                btn.innerText = "PUBLICAR PRODUCTO";
+            } else {
+                alert("¡Producto publicado con éxito!");
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
