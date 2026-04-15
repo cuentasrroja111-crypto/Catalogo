@@ -1,197 +1,62 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Catálogo 2026</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-
-    body {
-      background:
-        radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(241,245,249,1) 45%),
-        linear-gradient(to bottom, #f8fafc, #e2e8f0);
-      min-height: 100vh;
-    }
-
-    .glass-card {
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>.no-scrollbar::-webkit-scrollbar { display: none; }</style>
 </head>
-<body class="px-4 py-6 md:px-8 md:py-10 xl:px-12">
-  <div class="max-w-[1400px] mx-auto">
-    <header class="mb-10 md:mb-14">
-      <h1 class="text-center text-slate-900 font-black uppercase tracking-tight text-4xl md:text-5xl xl:text-6xl">
-        Catálogo de venta 2026
-      </h1>
-      <p class="text-center text-slate-500 mt-3 text-base md:text-lg">
-        Productos destacados disponibles
-      </p>
-    </header>
+<body class="bg-gray-100 p-4 md:p-10">
+    <h1 class="text-3xl font-black text-center text-slate-800 mb-10 uppercase tracking-tighter">Catálogo de venta 2026</h1>
+    <div id="catalog" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"></div>
+    <script>
+        const SB_URL = 'https://vobezwjwvnncquutilll.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvYmV6d2p3dm5uZWNxdXRpbGxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMTc0NjcsImV4cCI6MjA5MTc5MzQ2N30.Kjug3k4zTolfWJuC-qh4wy6henkzn-G9MGMHlswmcW0'; 
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-    <div id="loading" class="text-center text-slate-500 text-lg md:text-xl mb-8">
-      Cargando productos...
-    </div>
+        async function cargar() {
+            const { data, error } = await _supabase.from('productos').select('*').order('id', { ascending: false });
+            if (error) return console.log(error);
+            const container = document.getElementById('catalog');
+            container.innerHTML = ''; 
 
-    <div id="catalog" class="grid grid-cols-1 2xl:grid-cols-2 gap-10 xl:gap-12"></div>
-  </div>
+            data.forEach(p => {
+                const imgs = p.imagenes || [];
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col h-full";
+                
+                // Mostramos el precio tal cual viene de la base de datos (como texto)
+                const precioMostrar = p.precio; 
 
-  <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-    const SB_URL = 'https://vobezwjwvnnecqutilll.supabase.co';
-    const SB_KEY = 'sb_publishable_wpdyTc9jzNC3fguoroXDKg_QtDCnSOv';
-
-    const supabase = createClient(SB_URL, SB_KEY);
-
-    const catalog = document.getElementById('catalog');
-    const loading = document.getElementById('loading');
-
-    function normalizarImagenes(imagenes) {
-      if (Array.isArray(imagenes)) return imagenes;
-
-      if (typeof imagenes === 'string') {
-        try {
-          const parsed = JSON.parse(imagenes);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return imagenes ? [imagenes] : [];
-        }
-      }
-
-      return [];
-    }
-
-    function formatearDescripcion(texto) {
-      if (!texto) return '<p>Sin descripción</p>';
-
-      return String(texto)
-        .split('\n')
-        .map(l => l.trim())
-        .filter(Boolean)
-        .map(l => `
-          <div class="flex items-start justify-center gap-2">
-            <span class="text-slate-300 mt-[2px]">•</span>
-            <p>${l}</p>
-          </div>
-        `)
-        .join('');
-    }
-
-    function renderProductos(data) {
-      loading.classList.add('hidden');
-      catalog.innerHTML = '';
-
-      if (!data || data.length === 0) {
-        catalog.innerHTML = `
-          <div class="col-span-full glass-card rounded-[30px] shadow-xl p-10 text-center text-slate-500 text-lg">
-            No hay productos para mostrar.
-          </div>
-        `;
-        return;
-      }
-
-      data.forEach((p) => {
-        const imgs = normalizarImagenes(p.imagenes);
-
-        const card = document.createElement('article');
-        card.className = `
-          glass-card rounded-[34px] overflow-hidden shadow-[0_20px_60px_rgba(15,23,42,0.10)]
-          border border-white/70 flex flex-col h-full transition duration-300 hover:-translate-y-1
-          hover:shadow-[0_28px_80px_rgba(15,23,42,0.14)]
-        `;
-
-        card.innerHTML = `
-          <div class="relative">
-            <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-[340px] sm:h-[400px] md:h-[470px] xl:h-[560px] 2xl:h-[600px] scroll-smooth bg-slate-100">
-              ${
-                imgs.length
-                  ? imgs.map(url => `
-                      <img
-                        src="${url}"
-                        alt="${p.nombre || 'Producto'}"
-                        class="w-full h-full object-cover flex-shrink-0 snap-center"
-                        loading="lazy"
-                      >
-                    `).join('')
-                  : `
-                    <div class="w-full h-full flex items-center justify-center text-slate-400 bg-slate-200 flex-shrink-0 text-xl font-medium">
-                      Sin imagen
+                card.innerHTML = `
+                    <div class="relative group">
+                        <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-64 scroll-smooth">
+                            ${imgs.map(url => `<img src="${url}" class="w-full h-full object-cover flex-shrink-0 snap-center">`).join('')}
+                        </div>
+                        ${imgs.length > 1 ? `
+                            <button onclick="move('${p.id}', -1)" class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow">❮</button>
+                            <button onclick="move('${p.id}', 1)" class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 p-2 rounded-full shadow">❯</button>
+                        ` : ''}
                     </div>
-                  `
-              }
-            </div>
-
-            ${
-              imgs.length > 1
-                ? `
-                  <button onclick="move('${p.id}', -1)" class="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/95 text-slate-800 text-2xl shadow-xl border border-slate-200 hover:scale-105 transition">
-                    ❮
-                  </button>
-                  <button onclick="move('${p.id}', 1)" class="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/95 text-slate-800 text-2xl shadow-xl border border-slate-200 hover:scale-105 transition">
-                    ❯
-                  </button>
-                `
-                : ''
-            }
-
-            <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/15 to-transparent pointer-events-none"></div>
-          </div>
-
-          <div class="px-7 py-8 md:px-10 md:py-10 flex flex-col flex-grow text-center">
-            <h2 class="text-slate-900 font-black leading-tight text-2xl md:text-3xl xl:text-[2.2rem]">
-              ${p.nombre ?? 'Sin nombre'}
-            </h2>
-
-            <div class="mt-5 mb-6">
-              <span class="inline-flex items-center justify-center rounded-full bg-blue-50 text-blue-700 px-6 py-3 text-3xl md:text-4xl font-black shadow-sm border border-blue-100">
-                $${Number(p.precio ?? 0).toLocaleString('es-CL')}
-              </span>
-            </div>
-
-            <div class="w-20 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
-
-            <div class="text-slate-500 text-base md:text-lg leading-relaxed space-y-2 mt-auto">
-              ${formatearDescripcion(p.descripcion)}
-            </div>
-          </div>
-        `;
-
-        catalog.appendChild(card);
-      });
-    }
-
-    window.move = (id, dir) => {
-      const s = document.getElementById(`slider-${id}`);
-      if (!s) return;
-      s.scrollBy({ left: dir * s.offsetWidth, behavior: 'smooth' });
-    };
-
-    async function cargar() {
-      try {
-        const { data, error } = await supabase
-          .from('productos')
-          .select('id, nombre, precio, descripcion, imagenes')
-          .order('id', { ascending: false });
-
-        if (error) {
-          loading.classList.add('hidden');
-          console.error('Error Supabase:', error);
-          return;
+                    <div class="p-6 text-center flex-grow">
+                        <h2 class="text-xl font-bold text-slate-800 capitalize">${p.nombre}</h2>
+                        <div class="inline-block bg-blue-50 px-4 py-2 rounded-full my-3">
+                            <p class="text-2xl font-black text-blue-600">$${precioMostrar}</p>
+                        </div>
+                        <div class="text-sm text-gray-500 text-left border-t pt-4 space-y-1 italic">
+                            ${p.descripcion ? p.descripcion.split('\n').map(l => `<p>• ${l}</p>`).join('') : ''}
+                        </div>
+                    </div>`;
+                container.appendChild(card);
+            });
         }
-
-        renderProductos(data);
-      } catch (e) {
-        loading.classList.add('hidden');
-        console.error('Fallo de red o conexión:', e);
-      }
-    }
-
-    cargar();
-  </script>
+        window.move = (id, dir) => {
+            const s = document.getElementById(`slider-${id}`);
+            s.scrollBy({ left: dir * s.offsetWidth, behavior: 'smooth' });
+        };
+        cargar();
+    </script>
 </body>
 </html>
