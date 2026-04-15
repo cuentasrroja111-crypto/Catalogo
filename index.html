@@ -14,9 +14,7 @@
     Catálogo de venta 2026
   </h1>
 
-  <div id="loading" class="text-center text-gray-500 text-lg mb-6">Cargando productos...</div>
-
-  <div id="catalog" class="max-w-[1700px] mx-auto grid grid-cols-1 xl:grid-cols-2 gap-10 xl:gap-12"></div>
+  <div id="catalog" class="max-w-[1500px] mx-auto grid grid-cols-1 xl:grid-cols-2 gap-10 xl:gap-12"></div>
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -25,9 +23,7 @@
     const SB_KEY = 'sb_publishable_wpdyTc9jzNC3fguoroXDKg_QtDCnSOv';
 
     const supabase = createClient(SB_URL, SB_KEY);
-
     const catalog = document.getElementById('catalog');
-    const loading = document.getElementById('loading');
 
     function normalizarImagenes(imagenes) {
       if (Array.isArray(imagenes)) return imagenes;
@@ -51,7 +47,6 @@
     }
 
     function renderProductos(data) {
-      loading.classList.add('hidden');
       catalog.innerHTML = '';
 
       if (!data || data.length === 0) {
@@ -79,6 +74,7 @@
                         src="${url}"
                         alt="${p.nombre || 'Producto'}"
                         class="w-full h-full object-cover flex-shrink-0 snap-center"
+                        loading="lazy"
                       >
                     `).join('')
                   : `
@@ -88,6 +84,7 @@
                   `
               }
             </div>
+
             ${
               imgs.length > 1
                 ? `
@@ -139,10 +136,8 @@
       try {
         const { data, error } = await supabase
           .from('productos')
-          .select('id, nombre, precio, descripcion, imagenes')
-          .order('id', { ascending: false });
-
-        loading.classList.add('hidden');
+          .select('id, nombre, precio, descripcion, imagenes, created_at')
+          .order('created_at', { ascending: true });
 
         if (error) {
           console.error('Error Supabase:', error);
@@ -156,7 +151,6 @@
 
         renderProductos(data);
       } catch (e) {
-        loading.classList.add('hidden');
         console.error('Fallo de red o conexión:', e);
         catalog.innerHTML = `
           <div class="col-span-full text-center text-gray-500 bg-white rounded-3xl shadow p-10 text-lg">
