@@ -1,134 +1,167 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Subir Productos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catálogo 2026</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+  </style>
 </head>
-<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-100 px-4 py-6 md:px-8 md:py-10 xl:px-10">
+  <h1 class="text-4xl md:text-5xl font-black text-center text-slate-800 mb-10 md:mb-14 uppercase tracking-tight">
+    Catálogo de venta 2026
+  </h1>
 
-    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8">
-        <h2 class="text-2xl font-bold text-slate-800 mb-6 border-b pb-4">Añadir Nuevo Producto</h2>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Nombre del Producto</label>
-                <input
-                    type="text"
-                    id="nombre"
-                    class="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Ej: Monitor gaming ROG Strix XG27AQMR"
-                >
-            </div>
+  <div id="errorBox" class="hidden max-w-5xl mx-auto mb-8 rounded-3xl border border-red-200 bg-red-50 p-6 text-center">
+    <h2 class="text-xl md:text-2xl font-bold text-red-700 mb-2">Error al conectar con la base de datos</h2>
+    <p id="errorText" class="text-red-600"></p>
+  </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Precio (texto libre)</label>
-                <input
-                    type="text"
-                    id="precio"
-                    class="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Ej: $480.000 / 120 USD / Consultar"
-                >
-            </div>
+  <div id="loading" class="text-center text-gray-500 text-lg mb-6">Cargando productos...</div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Descripción (Características por línea)</label>
-                <textarea
-                    id="desc"
-                    rows="5"
-                    class="w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="27 Pulgadas&#10;Resolución 4K&#10;IPS rápido"
-                ></textarea>
-            </div>
+  <div id="catalog" class="max-w-[1700px] mx-auto grid grid-cols-1 xl:grid-cols-2 gap-10 xl:gap-12"></div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Imágenes (Hasta 10)</label>
-                <input
-                    type="file"
-                    id="fotos"
-                    multiple
-                    accept="image/*"
-                    class="w-full mt-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                >
-            </div>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-            <button
-                onclick="subirProducto()"
-                id="btnMain"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95"
-            >
-                PUBLICAR PRODUCTO
-            </button>
-        </div>
-    </div>
+    const SB_URL = 'https://vobezwjwvnnecqutilll.supabase.co';
+    const SB_KEY = 'sb_publishable_wpdyTc9jzNC3fguoroXDKg_QtDCnSOv';
 
-    <script>
-        const SB_URL = 'https://vobezwjwvnnecqutilll.supabase.co';
-        const SB_KEY = 'sb_publishable_wpdyTc9jzNC3fguoroXDKg_QtDCnSOv';
-        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+    const supabase = createClient(SB_URL, SB_KEY);
 
-        async function subirProducto() {
-            const btn = document.getElementById('btnMain');
-            const fileInput = document.getElementById('fotos');
-            const nombre = document.getElementById('nombre').value.trim();
-            const precio = document.getElementById('precio').value.trim();
-            const desc = document.getElementById('desc').value.trim();
+    const catalog = document.getElementById('catalog');
+    const errorBox = document.getElementById('errorBox');
+    const errorText = document.getElementById('errorText');
+    const loading = document.getElementById('loading');
 
-            if (!nombre || !precio || fileInput.files.length === 0) {
-                alert("Por favor completa nombre, precio y al menos una foto.");
-                return;
-            }
+    function mostrarError(msg) {
+      loading.classList.add('hidden');
+      errorBox.classList.remove('hidden');
+      errorText.textContent = msg;
+      console.error(msg);
+    }
 
-            btn.disabled = true;
-            btn.innerText = "SUBIENDO IMÁGENES...";
+    function normalizarImagenes(imagenes) {
+      if (Array.isArray(imagenes)) return imagenes;
 
-            let urlsCargadas = [];
-
-            try {
-                for (const file of fileInput.files) {
-                    const extension = file.name.split('.').pop();
-                    const nombreArchivo = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-
-                    const { error: uploadError } = await _supabase.storage
-                        .from('fotos')
-                        .upload(nombreArchivo, file);
-
-                    if (uploadError) {
-                        throw new Error(`Error subiendo imagen: ${uploadError.message}`);
-                    }
-
-                    const { data: publicData } = _supabase.storage
-                        .from('fotos')
-                        .getPublicUrl(nombreArchivo);
-
-                    urlsCargadas.push(publicData.publicUrl);
-                }
-
-                const { error: insertError } = await _supabase
-                    .from('productos')
-                    .insert([{
-                        nombre: nombre,
-                        precio: precio,
-                        descripcion: desc,
-                        imagenes: urlsCargadas
-                    }]);
-
-                if (insertError) {
-                    throw new Error(insertError.message);
-                }
-
-                alert("¡Producto publicado con éxito!");
-                location.reload();
-
-            } catch (err) {
-                console.error(err);
-                alert("Error al guardar: " + err.message);
-                btn.disabled = false;
-                btn.innerText = "PUBLICAR PRODUCTO";
-            }
+      if (typeof imagenes === 'string') {
+        try {
+          const parsed = JSON.parse(imagenes);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return imagenes ? [imagenes] : [];
         }
-    </script>
+      }
+
+      return [];
+    }
+
+    function renderProductos(data) {
+      loading.classList.add('hidden');
+      catalog.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        catalog.innerHTML = `
+          <div class="col-span-full text-center text-gray-500 bg-white rounded-3xl shadow p-10 text-lg">
+            No hay productos para mostrar.
+          </div>
+        `;
+        return;
+      }
+
+      data.forEach((p) => {
+        const imgs = normalizarImagenes(p.imagenes);
+
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-[30px] shadow-xl overflow-hidden flex flex-col h-full';
+
+        card.innerHTML = `
+          <div class="relative group">
+            <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-[320px] sm:h-[380px] md:h-[460px] xl:h-[520px] scroll-smooth">
+              ${
+                imgs.length
+                  ? imgs.map(url => `
+                      <img
+                        src="${url}"
+                        alt="${p.nombre || 'Producto'}"
+                        class="w-full h-full object-cover flex-shrink-0 snap-center"
+                      >
+                    `).join('')
+                  : `
+                    <div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200 flex-shrink-0 text-xl">
+                      Sin imagen
+                    </div>
+                  `
+              }
+            </div>
+            ${
+              imgs.length > 1
+                ? `
+                  <button onclick="move('${p.id}', -1)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 md:w-16 md:h-16 text-2xl rounded-full shadow-lg transition">
+                    ❮
+                  </button>
+                  <button onclick="move('${p.id}', 1)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 md:w-16 md:h-16 text-2xl rounded-full shadow-lg transition">
+                    ❯
+                  </button>
+                `
+                : ''
+            }
+          </div>
+
+          <div class="p-8 md:p-10 text-center flex-grow flex flex-col">
+            <h2 class="text-2xl md:text-3xl xl:text-[2.1rem] font-black text-slate-800 leading-tight">
+              ${p.nombre ?? 'Sin nombre'}
+            </h2>
+
+            <p class="text-3xl md:text-4xl font-black text-blue-600 my-4">
+              $${Number(p.precio ?? 0).toLocaleString('es-CL')}
+            </p>
+
+            <div class="text-base md:text-lg text-gray-500 border-t pt-6 space-y-2 leading-relaxed mt-auto">
+              ${
+                p.descripcion
+                  ? String(p.descripcion)
+                      .split('\n')
+                      .filter(l => l.trim() !== '')
+                      .map(l => `<p>${l}</p>`)
+                      .join('')
+                  : '<p>Sin descripción</p>'
+              }
+            </div>
+          </div>
+        `;
+
+        catalog.appendChild(card);
+      });
+    }
+
+    window.move = (id, dir) => {
+      const s = document.getElementById(`slider-${id}`);
+      if (!s) return;
+      s.scrollBy({ left: dir * s.offsetWidth, behavior: 'smooth' });
+    };
+
+    async function cargar() {
+      try {
+        const { data, error } = await supabase
+          .from('productos')
+          .select('id, nombre, precio, descripcion, imagenes')
+          .order('id', { ascending: false });
+
+        if (error) {
+          mostrarError(`Supabase respondió con error: ${error.message}`);
+          return;
+        }
+
+        renderProductos(data);
+      } catch (e) {
+        mostrarError(`Fallo de red o conexión: ${e.message}`);
+      }
+    }
+
+    cargar();
+  </script>
 </body>
 </html>
