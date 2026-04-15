@@ -7,21 +7,43 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
+
+    body {
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(241,245,249,1) 45%),
+        linear-gradient(to bottom, #f8fafc, #e2e8f0);
+      min-height: 100vh;
+    }
+
+    .glass-card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
   </style>
 </head>
-<body class="bg-gray-100 px-4 py-6 md:px-8 md:py-10 xl:px-10">
-  <h1 class="text-4xl md:text-5xl font-black text-center text-slate-800 mb-10 md:mb-14 uppercase tracking-tight">
-    Catálogo de venta 2026
-  </h1>
+<body class="px-4 py-6 md:px-8 md:py-10 xl:px-12">
+  <div class="max-w-[1750px] mx-auto">
+    <header class="mb-10 md:mb-14">
+      <h1 class="text-center text-slate-900 font-black uppercase tracking-tight text-4xl md:text-5xl xl:text-6xl">
+        Catálogo de venta 2026
+      </h1>
+      <p class="text-center text-slate-500 mt-3 text-base md:text-lg">
+        Productos destacados disponibles
+      </p>
+    </header>
 
-  <div id="errorBox" class="hidden max-w-5xl mx-auto mb-8 rounded-3xl border border-red-200 bg-red-50 p-6 text-center">
-    <h2 class="text-xl md:text-2xl font-bold text-red-700 mb-2">Error al conectar con la base de datos</h2>
-    <p id="errorText" class="text-red-600"></p>
+    <div id="errorBox" class="hidden max-w-5xl mx-auto mb-8 rounded-[28px] border border-red-200 bg-red-50/95 p-6 md:p-8 text-center shadow-lg">
+      <h2 class="text-xl md:text-2xl font-bold text-red-700 mb-2">Error al conectar con la base de datos</h2>
+      <p id="errorText" class="text-red-600 text-sm md:text-base"></p>
+    </div>
+
+    <div id="loading" class="text-center text-slate-500 text-lg md:text-xl mb-8">
+      Cargando productos...
+    </div>
+
+    <div id="catalog" class="grid grid-cols-1 2xl:grid-cols-2 gap-10 xl:gap-12"></div>
   </div>
-
-  <div id="loading" class="text-center text-gray-500 text-lg mb-6">Cargando productos...</div>
-
-  <div id="catalog" class="max-w-[1200px] mx-auto grid grid-cols-1 xl:grid-cols-2 gap-10 xl:gap-12"></div>
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -58,13 +80,29 @@
       return [];
     }
 
+    function formatearDescripcion(texto) {
+      if (!texto) return '<p>Sin descripción</p>';
+
+      return String(texto)
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+        .map(l => `
+          <div class="flex items-start justify-center gap-2">
+            <span class="text-slate-300 mt-[2px]">•</span>
+            <p>${l}</p>
+          </div>
+        `)
+        .join('');
+    }
+
     function renderProductos(data) {
       loading.classList.add('hidden');
       catalog.innerHTML = '';
 
       if (!data || data.length === 0) {
         catalog.innerHTML = `
-          <div class="col-span-full text-center text-gray-500 bg-white rounded-3xl shadow p-10 text-lg">
+          <div class="col-span-full glass-card rounded-[30px] shadow-xl p-10 text-center text-slate-500 text-lg">
             No hay productos para mostrar.
           </div>
         `;
@@ -74,12 +112,16 @@
       data.forEach((p) => {
         const imgs = normalizarImagenes(p.imagenes);
 
-        const card = document.createElement('div');
-        card.className = 'bg-white rounded-[30px] shadow-xl overflow-hidden flex flex-col h-full';
+        const card = document.createElement('article');
+        card.className = `
+          glass-card rounded-[34px] overflow-hidden shadow-[0_20px_60px_rgba(15,23,42,0.10)]
+          border border-white/70 flex flex-col h-full transition duration-300 hover:-translate-y-1
+          hover:shadow-[0_28px_80px_rgba(15,23,42,0.14)]
+        `;
 
         card.innerHTML = `
-          <div class="relative group">
-            <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-[320px] sm:h-[380px] md:h-[460px] xl:h-[520px] scroll-smooth">
+          <div class="relative">
+            <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-[340px] sm:h-[400px] md:h-[470px] xl:h-[560px] 2xl:h-[600px] scroll-smooth bg-slate-100">
               ${
                 imgs.length
                   ? imgs.map(url => `
@@ -87,48 +129,48 @@
                         src="${url}"
                         alt="${p.nombre || 'Producto'}"
                         class="w-full h-full object-cover flex-shrink-0 snap-center"
+                        loading="lazy"
                       >
                     `).join('')
                   : `
-                    <div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-200 flex-shrink-0 text-xl">
+                    <div class="w-full h-full flex items-center justify-center text-slate-400 bg-slate-200 flex-shrink-0 text-xl font-medium">
                       Sin imagen
                     </div>
                   `
               }
             </div>
+
             ${
               imgs.length > 1
                 ? `
-                  <button onclick="move('${p.id}', -1)" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 md:w-16 md:h-16 text-2xl rounded-full shadow-lg transition">
+                  <button onclick="move('${p.id}', -1)" class="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/95 text-slate-800 text-2xl shadow-xl border border-slate-200 hover:scale-105 transition">
                     ❮
                   </button>
-                  <button onclick="move('${p.id}', 1)" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white w-14 h-14 md:w-16 md:h-16 text-2xl rounded-full shadow-lg transition">
+                  <button onclick="move('${p.id}', 1)" class="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/95 text-slate-800 text-2xl shadow-xl border border-slate-200 hover:scale-105 transition">
                     ❯
                   </button>
                 `
                 : ''
             }
+
+            <div class="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/15 to-transparent pointer-events-none"></div>
           </div>
 
-          <div class="p-8 md:p-10 text-center flex-grow flex flex-col">
-            <h2 class="text-2xl md:text-3xl xl:text-[2.1rem] font-black text-slate-800 leading-tight">
+          <div class="px-7 py-8 md:px-10 md:py-10 flex flex-col flex-grow text-center">
+            <h2 class="text-slate-900 font-black leading-tight text-2xl md:text-3xl xl:text-[2.2rem]">
               ${p.nombre ?? 'Sin nombre'}
             </h2>
 
-            <p class="text-3xl md:text-4xl font-black text-blue-600 my-4">
-              $${Number(p.precio ?? 0).toLocaleString('es-CL')}
-            </p>
+            <div class="mt-5 mb-6">
+              <span class="inline-flex items-center justify-center rounded-full bg-blue-50 text-blue-700 px-6 py-3 text-3xl md:text-4xl font-black shadow-sm border border-blue-100">
+                $${Number(p.precio ?? 0).toLocaleString('es-CL')}
+              </span>
+            </div>
 
-            <div class="text-base md:text-lg text-gray-500 border-t pt-6 space-y-2 leading-relaxed mt-auto">
-              ${
-                p.descripcion
-                  ? String(p.descripcion)
-                      .split('\n')
-                      .filter(l => l.trim() !== '')
-                      .map(l => `<p>${l}</p>`)
-                      .join('')
-                  : '<p>Sin descripción</p>'
-              }
+            <div class="w-20 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
+
+            <div class="text-slate-500 text-base md:text-lg leading-relaxed space-y-2 mt-auto">
+              ${formatearDescripcion(p.descripcion)}
             </div>
           </div>
         `;
