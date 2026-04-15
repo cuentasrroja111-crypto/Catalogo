@@ -6,20 +6,40 @@
     <title>Catálogo 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>.no-scrollbar::-webkit-scrollbar { display: none; }</style>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
 <body class="bg-gray-100 p-4 md:p-10">
     <h1 class="text-3xl font-black text-center text-slate-800 mb-10 uppercase tracking-tighter">Catálogo de venta 2026</h1>
-    <div id="catalog" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"></div>
+    <div id="catalog" class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <p class="col-span-full text-center text-gray-400">Cargando productos...</p>
+    </div>
+
     <script>
         const SB_URL = 'https://vobezwjwvnncquutilll.supabase.co';
         const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvYmV6d2p3dm5uZWNxdXRpbGxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMTc0NjcsImV4cCI6MjA5MTc5MzQ2N30.Kjug3k4zTolfWJuC-qh4wy6henkzn-G9MGMHlswmcW0'; 
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-        async function cargar() {
-            const { data, error } = await _supabase.from('productos').select('*').order('id', { ascending: false });
-            if (error) return console.log(error);
+        async function cargarTodo() {
             const container = document.getElementById('catalog');
+            
+            const { data, error } = await _supabase
+                .from('productos')
+                .select('*')
+                .order('id', { ascending: false });
+
+            if (error) {
+                container.innerHTML = `<p class="col-span-full text-center text-red-500">Error: ${error.message}</p>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center text-gray-500 italic">No hay productos publicados.</p>`;
+                return;
+            }
+
             container.innerHTML = ''; 
 
             data.forEach(p => {
@@ -27,12 +47,9 @@
                 const card = document.createElement('div');
                 card.className = "bg-white rounded-2xl shadow-lg overflow-hidden flex flex-col h-full";
                 
-                // Mostramos el precio tal cual viene de la base de datos (como texto)
-                const precioMostrar = p.precio; 
-
                 card.innerHTML = `
                     <div class="relative group">
-                        <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-64 scroll-smooth">
+                        <div id="slider-${p.id}" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-64 scroll-smooth bg-gray-200">
                             ${imgs.map(url => `<img src="${url}" class="w-full h-full object-cover flex-shrink-0 snap-center">`).join('')}
                         </div>
                         ${imgs.length > 1 ? `
@@ -43,7 +60,7 @@
                     <div class="p-6 text-center flex-grow">
                         <h2 class="text-xl font-bold text-slate-800 capitalize">${p.nombre}</h2>
                         <div class="inline-block bg-blue-50 px-4 py-2 rounded-full my-3">
-                            <p class="text-2xl font-black text-blue-600">$${precioMostrar}</p>
+                            <p class="text-2xl font-black text-blue-600">$${p.precio}</p>
                         </div>
                         <div class="text-sm text-gray-500 text-left border-t pt-4 space-y-1 italic">
                             ${p.descripcion ? p.descripcion.split('\n').map(l => `<p>• ${l}</p>`).join('') : ''}
@@ -52,11 +69,14 @@
                 container.appendChild(card);
             });
         }
+
         window.move = (id, dir) => {
             const s = document.getElementById(`slider-${id}`);
             s.scrollBy({ left: dir * s.offsetWidth, behavior: 'smooth' });
         };
-        cargar();
+
+        // Ejecutar carga inmediatamente
+        cargarTodo();
     </script>
 </body>
 </html>
