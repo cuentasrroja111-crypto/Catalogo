@@ -136,8 +136,8 @@
       try {
         const { data, error } = await supabase
           .from('productos')
-          .select('id, nombre, precio, descripcion, imagenes, created_at')
-          .order('created_at', { ascending: true });
+          .select('id, nombre, precio, descripcion, imagenes')
+          .order('id', { ascending: true });
 
         if (error) {
           console.error('Error Supabase:', error);
